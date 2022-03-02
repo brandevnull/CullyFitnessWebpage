@@ -3,5 +3,6 @@ export default class Client {
         this.firstName = firstName;
         this.lastName = lastName;
         this.maxes = maxes;
+        this.fullName = [firstName, lastName].join(' ');
     }
 }

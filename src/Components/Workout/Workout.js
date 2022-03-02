@@ -7,15 +7,69 @@ import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import './Workout.css';
 
+import Exercise from '../../Models/Exercise';
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { Redirect } from "react-router-dom";
+//import { cleanup } from '@testing-library/react';
+
+initializeApp({
+  apiKey: 'AIzaSyBoQT4L3shuLfXGgQeQKR6jv2V0zA-Xnk0',
+  authDomain: 'cullyfitness.firebaseapp.com',
+  projectId: 'cullyfitness'
+});
+
+const db = getFirestore();
 export default function Workout(props) {
 
-    const [client, setClient] = useState(props.location.state.client);
-    const [multipliers, setMultipliers] = useState(props.location.state.multipliers);
-    const [iterations, setIterations] = useState(props.location.state.iterations); 
+    const [client, setClient] = useState(JSON.parse(localStorage.getItem("selectedClient")));
+    const [multipliers, setMultipliers] = useState([]);
+    const [iterations, setIterations] = useState([]);
     const [exercises, setExercises] = useState([]);
     const [dayId, setDayId] = useState(100);
 
     useEffect(() => {
+
+        var isComponentMounted = true;
+
+        if (!client) {
+            return;
+        }
+
+        console.log("UE1")
+
+        getDocs(collection(db, "Exercises")).then((exercises) => {
+            const tempExercises = [];
+            exercises.forEach((doc) => {
+              let newExercise = new Exercise(doc.data().DayId, doc.data().Multipliers, doc.data().Name);
+              tempExercises.push(newExercise);
+            });
+
+            if (isComponentMounted) {
+                setMultipliers(tempExercises);
+            }
+          });
+    
+          getDocs(collection(db, "CurrentIterations")).then((iterations) => {
+            iterations.forEach((iteration) => {
+
+                if (isComponentMounted) {
+                    setIterations(iteration.data());
+                } else {
+                    console.log("bail 2")
+                }
+            })
+          })
+
+          return function cleanup() {
+            isComponentMounted = false;
+          }
+
+    }, [client]);
+
+    useEffect(() => {
+
+        var isComponentMounted = true;
 
         (function() {
             let block = iterations.Block;
@@ -24,6 +78,10 @@ export default function Workout(props) {
             let day = date.getDay();
             let exerciseList = [];
             let dailyMultiplierList = [];
+
+            if (!block || !client) {
+                return;
+            }
     
             multipliers.forEach((multiplier) => {
                 let convertedDay = 0;
@@ -50,19 +108,29 @@ export default function Workout(props) {
                 exerciseList.push(newExercise);
             })
     
-            setExercises(exerciseList);
+            if (isComponentMounted) {
+                setExercises(exerciseList);
+            } else {
+                console.log("bail 1")
+            }
         })();
 
-    }, [client, multipliers, iterations, dayId]);
+        return function cleanup() {
+            isComponentMounted = false;
+        }
 
-    useEffect(() => {}, [exercises]);
+    }, [client, multipliers, iterations, dayId]);
 
     const exerciseCards = exercises.map((exercise) =>
         <ExerciseCard name={exercise.name} sets={exercise.sets} reps={exercise.reps} weight={exercise.weight} max={exercise.max} multiplier={exercise.multiplier}/>
     );
 
-    return (
+    return client == null ? <Redirect to=".." /> : (
         <Box className="WorkoutPageContainer" mt={5}>
+            <Box>
+                Welcome, {client.fullName}
+                <Button onClick={() => setClient(null)}>change user</Button>
+            </Box>
             <Box ml={1}>
                 <Typography variant="h5">
                     Block: {iterations.Block}, Week: {iterations.Week}
@@ -86,7 +154,7 @@ export default function Workout(props) {
             </Stack>
             {exerciseCards}
         </Box>
-    )
+    );
 
     function setButton1() {
         setDayId(1);
