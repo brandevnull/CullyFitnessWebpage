@@ -1,5 +1,10 @@
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
+
 import React, {useState, useEffect} from 'react'
+import { Redirect } from "react-router-dom";
 import Typography from '@mui/material/Typography';
+import Exercise from '../../Models/Exercise';
 import ExerciseInfo from '../../Models/ExerciseInfo';
 import ExerciseCard  from '../ExerciseCard/ExerciseCard';
 import { Button } from '@mui/material';
@@ -7,17 +12,11 @@ import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import './Workout.css';
 
-import Exercise from '../../Models/Exercise';
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
-import { Redirect } from "react-router-dom";
-//import { cleanup } from '@testing-library/react';
-
-initializeApp({
-  apiKey: 'AIzaSyBoQT4L3shuLfXGgQeQKR6jv2V0zA-Xnk0',
-  authDomain: 'cullyfitness.firebaseapp.com',
-  projectId: 'cullyfitness'
-});
+const firebaseApp = initializeApp({
+    apiKey: 'AIzaSyBoQT4L3shuLfXGgQeQKR6jv2V0zA-Xnk0',
+    authDomain: 'cullyfitness.firebaseapp.com',
+    projectId: 'cullyfitness'
+  });
 
 const db = getFirestore();
 export default function Workout(props) {
@@ -36,8 +35,6 @@ export default function Workout(props) {
             return;
         }
 
-        console.log("UE1")
-
         getDocs(collection(db, "Exercises")).then((exercises) => {
             const tempExercises = [];
             exercises.forEach((doc) => {
@@ -55,8 +52,6 @@ export default function Workout(props) {
 
                 if (isComponentMounted) {
                     setIterations(iteration.data());
-                } else {
-                    console.log("bail 2")
                 }
             })
           })
@@ -71,49 +66,45 @@ export default function Workout(props) {
 
         var isComponentMounted = true;
 
-        (function() {
-            let block = iterations.Block;
-            let week = iterations.Week;
-            let date = new Date();
-            let day = date.getDay();
-            let exerciseList = [];
-            let dailyMultiplierList = [];
+        let block = iterations.Block;
+        let week = iterations.Week;
+        let date = new Date();
+        let day = date.getDay();
+        let exerciseList = [];
+        let dailyMultiplierList = [];
 
-            if (!block || !client) {
-                return;
+        if (!block || !client) {
+            return;
+        }
+
+        multipliers.forEach((multiplier) => {
+            let convertedDay = 0;
+            if (dayId === 100) {
+                convertedDay = convertDay(day);
             }
-    
-            multipliers.forEach((multiplier) => {
-                let convertedDay = 0;
-                if (dayId === 100) {
-                    convertedDay = convertDay(day);
-                }
-                else convertedDay = dayId;
-                if (multiplier.DayId === convertedDay) {
-                    dailyMultiplierList.push(multiplier);
-                }            
-            })
-    
-            dailyMultiplierList.forEach((multiplier) => {
-                let name = multiplier.Name;
-                let sets = multiplier.Multipliers[block-1].Weeks[week-1].Sets;
-                let reps = multiplier.Multipliers[block-1].Weeks[week-1].Reps;
-                let weightMultiplier = multiplier.Multipliers[block-1].Weeks[week-1].Multiplier;
-    
-                let max = client.maxes.find((max) => max.name === name).weight;
-                let weight = Math.round(weightMultiplier * max);
-    
-                let newExercise = new ExerciseInfo(name, sets, reps, weight, max, weightMultiplier);
-    
-                exerciseList.push(newExercise);
-            })
-    
-            if (isComponentMounted) {
-                setExercises(exerciseList);
-            } else {
-                console.log("bail 1")
-            }
-        })();
+            else convertedDay = dayId;
+            if (multiplier.DayId === convertedDay) {
+                dailyMultiplierList.push(multiplier);
+            }            
+        })
+
+        dailyMultiplierList.forEach((multiplier) => {
+            let name = multiplier.Name;
+            let sets = multiplier.Multipliers[block-1].Weeks[week-1].Sets;
+            let reps = multiplier.Multipliers[block-1].Weeks[week-1].Reps;
+            let weightMultiplier = multiplier.Multipliers[block-1].Weeks[week-1].Multiplier;
+
+            let max = client.maxes.find((max) => max.name === name).weight;
+            let weight = Math.round(weightMultiplier * max);
+
+            let newExercise = new ExerciseInfo(name, sets, reps, weight, max, weightMultiplier);
+
+            exerciseList.push(newExercise);
+        })
+
+        if (isComponentMounted) {
+            setExercises(exerciseList);
+        }
 
         return function cleanup() {
             isComponentMounted = false;
@@ -125,7 +116,11 @@ export default function Workout(props) {
         <ExerciseCard name={exercise.name} sets={exercise.sets} reps={exercise.reps} weight={exercise.weight} max={exercise.max} multiplier={exercise.multiplier}/>
     );
 
-    return client == null ? <Redirect to=".." /> : (
+    if (client == null) {
+        return <Redirect to=".." />
+    }
+
+    return (
         <Box className="WorkoutPageContainer" mt={5}>
             <Box>
                 Welcome, {client.fullName}

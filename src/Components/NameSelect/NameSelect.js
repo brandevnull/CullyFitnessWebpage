@@ -11,7 +11,7 @@ import { Button } from '@mui/material';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 
-initializeApp({
+const firebaseApp = initializeApp({
   apiKey: 'AIzaSyBoQT4L3shuLfXGgQeQKR6jv2V0zA-Xnk0',
   authDomain: 'cullyfitness.firebaseapp.com',
   projectId: 'cullyfitness'
